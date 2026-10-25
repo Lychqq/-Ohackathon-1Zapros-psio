@@ -1,0 +1,82 @@
+{
+  "ACE": {
+    "code": "ACE",
+    "name": "Лансароте",
+    "island": "Лансароте",
+    "city_code": "ACE",
+    "country_code": "ES",
+    "lat": 28.950668,
+    "lon": -13.609059,
+    "is_international": true
+  },
+  "TFS": {
+    "code": "TFS",
+    "name": "Тенерифе Южный",
+    "island": "Тенерифе",
+    "city_code": "TCI",
+    "country_code": "ES",
+    "lat": 28.044443,
+    "lon": -16.5725,
+    "is_international": true
+  },
+  "VDE": {
+    "code": "VDE",
+    "name": "Вальверде",
+    "island": "Эль-Йерро",
+    "city_code": "VDE",
+    "country_code": "ES",
+    "lat": 27.813969,
+    "lon": -17.884937,
+    "is_international": false
+  },
+  "LPA": {
+    "code": "LPA",
+    "name": "Гран-Канария",
+    "island": "Гран-Канария",
+    "city_code": "LPA",
+    "country_code": "ES",
+    "lat": 27.938944,
+    "lon": -15.389351,
+    "is_international": true
+  },
+  "TFN": {
+    "code": "TFN",
+    "name": "Норте",
+    "island": "Тенерифе",
+    "city_code": "TCI",
+    "country_code": "ES",
+    "lat": 28.488056,
+    "lon": -16.345982,
+    "is_international": true
+  },
+  "FUE": {
+    "code": "FUE",
+    "name": "Фуэртевентура",
+    "island": "Фуэртевентура",
+    "city_code": "FUE",
+    "country_code": "ES",
+    "lat": 28.450605,
+    "lon": -13.869893,
+    "is_international": true
+  },
+  "GMZ": {
+    "code": "GMZ",
+    "name": "Ля-Гомера",
+    "island": "Ла-Гомера",
+    "city_code": "GMZ",
+    "country_code": "ES",
+    "lat": 28.016666,
+    "lon": -17.2,
+    "is_international": false
+  },
+  "SPC": {
+    "code": "SPC",
+    "name": "Ла-Пальма",
+    "island": "Ла-Пальма",
+    "city_code": "SPC",
+    "country_code": "ES",
+    "lat": 28.626389,
+    "lon": -17.755556,
+    "is_international": true
+  }
+}

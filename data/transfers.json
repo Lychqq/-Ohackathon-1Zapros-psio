@@ -1,0 +1,55 @@
+{
+  "eur_rub_rate": 90.2429,
+  "tariffs": {
+    "Тенерифе": {
+      "source_url": "https://www.taxi-calculator.com/taxi-fare-tenerife/640",
+      "base_fee_eur": 3.15,
+      "km_fee_eur": 1.1,
+      "base_fee_rub": 284.27,
+      "km_fee_rub": 99.27,
+      "vehicle_types": {
+        "taxi_standard": {
+          "name": "Стандартное такси (Седан)",
+          "passengers": 3,
+          "base_rub": 284,
+          "km_rub": 99
+        },
+        "minivan_family": {
+          "name": "Семейный минивэн (до 6 мест + детские кресла)",
+          "passengers": 6,
+          "base_rub": 384,
+          "km_rub": 134
+        },
+        "shuttle_bus": {
+          "name": "Групповой курортный шаттл",
+          "fixed_per_person_rub": 902
+        }
+      }
+    },
+    "Гран-Канария": {
+      "source_url": "https://www.taxi-calculator.com/taxi-fare-las-palmas-de-gran-canaria/641",
+      "base_fee_eur": 2.5,
+      "km_fee_eur": 1.15,
+      "base_fee_rub": 225.61,
+      "km_fee_rub": 103.78,
+      "vehicle_types": {
+        "taxi_standard": {
+          "name": "Стандартное такси (Седан)",
+          "passengers": 3,
+          "base_rub": 226,
+          "km_rub": 104
+        },
+        "minivan_family": {
+          "name": "Семейный минивэн (до 6 мест + детские кресла)",
+          "passengers": 6,
+          "base_rub": 305,
+          "km_rub": 140
+        },
+        "shuttle_bus": {
+          "name": "Групповой курортный шаттл",
+          "fixed_per_person_rub": 902
+        }
+      }
+    }
+  }
+}
