@@ -1,0 +1,1148 @@
+:root {
+  --bg-page: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-subtle: #f1f5f9;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-subtle: #94a3b8;
+  
+  /* Премиальная сдержанная палитра для путешествий (глубокий графит и спокойный изумруд) */
+  --primary: #0f172a;
+  --primary-hover: #1e293b;
+  --primary-subtle: #f1f5f9;
+  --primary-border: #cbd5e1;
+  
+  --accent-teal: #0f766e;
+  --accent-teal-subtle: #f0fdfa;
+  --accent-green: #047857;
+  --accent-green-bg: #ecfdf5;
+  
+  --border-light: #e2e8f0;
+  --border-dark: #cbd5e1;
+  
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.08);
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  background-color: var(--bg-page);
+  color: var(--text-main);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ========================================= */
+/* 1. ВЕРХНЯЯ ШАПКА                          */
+/* ========================================= */
+.app-navbar {
+  height: 54px;
+  background-color: #ffffff;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  z-index: 50;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.logo-text {
+  font-size: 20px;
+  font-weight: 800;
+  color: #181e24;
+  letter-spacing: -0.02em;
+}
+
+.logo-accent {
+  color: var(--primary);
+}
+
+.logo-tag {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background-color: var(--bg-subtle);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.currency-tag {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.btn-new-trip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background-color: #ffffff;
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-new-trip:hover {
+  background-color: var(--bg-subtle);
+  border-color: var(--text-main);
+}
+
+/* ========================================= */
+/* 2. РАБОЧАЯ ОБЛАСТЬ (ЧАТ + АРТЕФАКТ)       */
+/* ========================================= */
+.workspace-layout {
+  height: calc(100vh - 54px);
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Режим чата на весь экран (до появления артефакта) */
+.workspace-layout.chat-only .chat-section {
+  flex: 1;
+  max-width: 840px;
+  margin: 0 auto;
+  border-right: none;
+  background: transparent;
+}
+
+.workspace-layout.chat-only .artifact-panel {
+  display: none;
+}
+
+/* Режим сплита (когда артефакт открыт) */
+.workspace-layout.split-view .chat-section {
+  flex: 0 0 360px;
+  width: 360px;
+  background-color: #ffffff;
+  border-right: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease-in-out;
+}
+
+.workspace-layout.split-view .artifact-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-page);
+  height: 100%;
+  overflow: hidden;
+  animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.2s ease-in-out;
+}
+
+/* Режим полного скрытия чата (план тура во весь экран) */
+.workspace-layout.split-view.chat-collapsed .chat-section {
+  display: none !important;
+}
+
+.workspace-layout.split-view.chat-collapsed .artifact-panel {
+  flex: 1 1 100% !important;
+  width: 100% !important;
+  border-left: none;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* ========================================= */
+/* 3. ЧАТ-СЕКЦИЯ                             */
+/* ========================================= */
+.chat-section {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+}
+
+.chat-history {
+  flex: 1;
+  overflow-y: auto;
+  padding: 30px 24px 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Стартовое Hero-окно ввода */
+.chat-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.hero-title {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.03em;
+  margin-bottom: 12px;
+}
+
+.hero-subtitle {
+  font-size: 15px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 28px;
+  max-width: 620px;
+}
+
+.hero-prompt-box {
+  width: 100%;
+  background-color: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  box-shadow: var(--shadow-md);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  text-align: left;
+}
+
+.hero-prompt-box:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(217, 83, 47, 0.12);
+}
+
+.prompt-textarea {
+  width: 100%;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--text-main);
+  line-height: 1.5;
+  resize: none;
+}
+
+.prompt-textarea::placeholder {
+  color: var(--text-subtle);
+}
+
+.prompt-bottom-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-light);
+}
+
+.prompt-hint {
+  font-size: 12px;
+  color: var(--text-subtle);
+}
+
+.btn-submit-prompt {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 20px;
+  background-color: var(--primary);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.btn-submit-prompt:hover {
+  background-color: var(--primary-hover);
+}
+
+.hero-suggestions {
+  margin-top: 28px;
+  text-align: left;
+  width: 100%;
+}
+
+.sugg-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  display: block;
+}
+
+.sugg-tags {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sugg-btn {
+  text-align: left;
+  background-color: #ffffff;
+  border: 1px solid var(--border-light);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.sugg-btn:hover {
+  background-color: var(--primary-subtle);
+  border-color: var(--primary-border);
+  color: var(--primary);
+}
+
+/* Сообщения в чате */
+.chat-msg {
+  display: flex;
+  flex-direction: column;
+  max-width: 90%;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.chat-msg-user {
+  align-self: flex-end;
+}
+
+.chat-msg-user .bubble {
+  background-color: var(--text-main);
+  color: #ffffff;
+  border-radius: var(--radius-md) var(--radius-md) 2px var(--radius-md);
+  padding: 12px 18px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.chat-msg-agent {
+  align-self: flex-start;
+  width: 100%;
+}
+
+.chat-msg-agent .bubble {
+  background-color: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 2px;
+  padding: 16px 20px;
+  font-size: 14px;
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Карточка триггера артефакта внутри сообщения */
+.artifact-trigger-card {
+  margin-top: 14px;
+  background-color: var(--bg-subtle);
+  border: 1.5px solid var(--primary-border);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.artifact-trigger-card:hover {
+  background-color: var(--primary-subtle);
+  border-color: var(--primary);
+}
+
+.trigger-info strong {
+  font-size: 14px;
+  display: block;
+  color: var(--text-main);
+}
+
+.trigger-info span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.btn-open-art {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* Нижняя прижатая полоса ввода чата */
+.sticky-input-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px 24px;
+  background: linear-gradient(to top, #ffffff 80%, rgba(255,255,255,0));
+  z-index: 20;
+}
+
+.input-card {
+  background-color: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: var(--shadow-sm);
+}
+
+.input-card:focus-within {
+  border-color: var(--primary);
+}
+
+.stream-textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  resize: none;
+}
+
+.btn-stream-send {
+  width: 34px;
+  height: 34px;
+  background-color: var(--primary);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s;
+}
+
+.btn-stream-send:hover {
+  background-color: var(--primary-hover);
+}
+
+/* ========================================= */
+/* 4. ПРАВАЯ ПАНЕЛЬ: АРТЕФАКТ ПОЕЗДКИ        */
+/* ========================================= */
+.artifact-panel {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-page);
+  height: 100%;
+  border-left: 1px solid var(--border-light);
+}
+
+.artifact-header {
+  padding: 14px 24px;
+  background-color: #ffffff;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.art-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.btn-toggle-chat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-toggle-chat:hover {
+  background-color: var(--primary-subtle);
+  border-color: var(--primary-border);
+  color: var(--primary);
+}
+
+.btn-toggle-chat svg {
+  flex-shrink: 0;
+  color: var(--primary);
+}
+
+.artifact-icon-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--primary-subtle);
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  margin-bottom: 4px;
+}
+
+.artifact-headline {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.btn-ctrl {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s;
+}
+
+.btn-ctrl:hover {
+  background-color: var(--bg-subtle);
+  color: var(--text-main);
+}
+
+.artifact-tabs {
+  padding: 10px 24px 0;
+  background-color: #ffffff;
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.art-tab {
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.art-tab:hover {
+  color: var(--text-main);
+}
+
+.art-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.artifact-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.tab-pane {
+  display: none;
+}
+
+.tab-pane.active {
+  display: block;
+}
+
+/* Таймлайн поездки */
+.journey-summary-card {
+  background-color: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 24px;
+}
+
+.journey-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.journey-badge {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.journey-duration {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.journey-dates {
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 20px;
+}
+
+.timeline-flow {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding-left: 20px;
+}
+
+.timeline-flow::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 24px;
+  left: 6px;
+  width: 2px;
+  background-color: var(--border-dark);
+}
+
+.timeline-step {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.timeline-step:last-child {
+  margin-bottom: 0;
+}
+
+.step-point {
+  position: absolute;
+  left: -20px;
+  top: 4px;
+  width: 14px;
+  height: 14px;
+  background-color: #ffffff;
+  border: 3px solid var(--primary);
+  border-radius: 50%;
+  z-index: 2;
+}
+
+.step-point-hotel {
+  border-color: var(--accent-green);
+}
+
+.step-content {
+  padding-left: 6px;
+}
+
+.step-time {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.step-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 2px;
+}
+
+.step-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Списки карточек по вкладкам (Сетка по 2 в ряд) */
+.catalog-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 960px) {
+  .catalog-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Карточка отеля в каталоге */
+.catalog-hotel-card {
+  background-color: #ffffff;
+  border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.catalog-hotel-card:hover {
+  border-color: var(--border-dark);
+}
+
+.catalog-hotel-card.selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.12), var(--shadow-md);
+}
+
+.catalog-hotel-img-box {
+  width: 100%;
+  height: 200px;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--bg-subtle);
+}
+
+.catalog-hotel-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.badge-ai-pick {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  background-color: var(--primary);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.02em;
+}
+
+.badge-selected {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background-color: var(--accent-green);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+}
+
+.catalog-hotel-body {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 8px;
+}
+
+.catalog-hotel-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.catalog-hotel-name {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.catalog-hotel-stars {
+  color: #f59e0b;
+  font-size: 14px;
+  letter-spacing: 2px;
+}
+
+.catalog-hotel-address {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.catalog-hotel-address svg {
+  flex-shrink: 0;
+  color: var(--primary);
+}
+
+.catalog-hotel-rating {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.rating-badge {
+  background-color: var(--accent-green-bg);
+  color: var(--accent-green);
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+.badge-match-pill {
+  margin-left: auto;
+  background-color: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  font-weight: 700;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.catalog-hotel-desc {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-main);
+  margin-top: 4px;
+}
+
+.catalog-hotel-amenities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.catalog-hotel-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-light);
+}
+
+.catalog-hotel-price-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.catalog-hotel-price {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+}
+
+.catalog-hotel-price-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.btn-select-item {
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-dark);
+  background-color: #ffffff;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-select-item:hover:not(.active) {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+}
+
+.btn-select-item.active {
+  background-color: var(--accent-green-bg);
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+  cursor: default;
+}
+
+/* Карточки перелета и трансфера */
+.catalog-item-card {
+  background-color: #ffffff;
+  border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 18px 22px;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.15s;
+}
+
+.catalog-item-card.selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(217, 83, 47, 0.15);
+}
+
+.catalog-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.catalog-item-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.catalog-item-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.catalog-item-meta {
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+
+.catalog-item-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-light);
+}
+
+/* Детальные карточки вкладок */
+.component-card {
+  background-color: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.hotel-image-wrap {
+  width: 100%;
+  height: 280px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: 18px;
+  background-color: var(--bg-subtle);
+}
+
+.hotel-hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hotel-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.hotel-name-h {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.hotel-stars-tag {
+  color: #f59e0b;
+  font-size: 14px;
+  letter-spacing: 2px;
+}
+
+.hotel-address-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.hotel-address-icon {
+  flex-shrink: 0;
+  color: var(--primary);
+}
+
+.hotel-rating-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--accent-green-bg);
+  color: var(--accent-green);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 14px;
+}
+
+.hotel-desc-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-main);
+  margin-bottom: 18px;
+}
+
+.amenities-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.amenity-chip {
+  font-size: 12px;
+  background-color: var(--bg-subtle);
+  color: var(--text-main);
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+}
+
+/* Подвал артефакта */
+.artifact-footer {
+  padding: 18px 24px;
+  background-color: #ffffff;
+  border-top: 1px solid var(--border-light);
+}
+
+.footer-price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.total-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.total-number {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+}
+
+.btn-toggle-breakdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s;
+}
+
+.btn-toggle-breakdown:hover {
+  background-color: var(--bg-subtle);
+  color: var(--text-main);
+}
+
+.price-breakdown-details {
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.breakdown-row strong {
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+}
+
+.btn-book-package {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px;
+  background-color: var(--primary);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-book-package:hover {
+  background-color: var(--primary-hover);
+}
+
+.hidden {
+  display: none !important;
+}

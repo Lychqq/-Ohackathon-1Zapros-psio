@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Островок — Туры под ключ</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Шапка Ostrovok -->
+  <header class="app-navbar">
+    <div class="nav-left">
+      <div class="nav-brand">
+        <span class="logo-text">ostrovok<span class="logo-accent">.ru</span></span>
+      </div>
+      <nav class="nav-menu">
+        <span class="nav-item active">Туры под ключ</span>
+        <span class="nav-item">Отели</span>
+        <span class="nav-item">Авиабилеты</span>
+      </nav>
+    </div>
+    <div class="nav-right">
+      <span class="currency-tag">RUB (₽)</span>
+      <button type="button" id="newTripBtn" class="btn-new-trip">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>Новый поиск</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Главное рабочее пространство (Чат + Маршрут тура) -->
+  <div id="workspaceLayout" class="workspace-layout chat-only">
+
+    <!-- ЛЕВАЯ КОЛОНКА: ДИАЛОГ -->
+    <section class="chat-section">
+      <div id="chatHistory" class="chat-history">
+        <!-- Стартовый экран -->
+        <div id="chatWelcomeHero" class="chat-hero">
+          <h1 class="hero-title">Куда хотите поехать?</h1>
+          <p class="hero-subtitle">
+            Опишите поездку своими словами: даты, состав гостей, пожелания к отелю, рейсу и трансферу.
+          </p>
+
+          <div class="hero-prompt-box">
+            <textarea
+              id="heroInput"
+              class="prompt-textarea"
+              rows="3"
+              placeholder="Тенерифе на двоих на неделю, отель 5 звезд с бассейном у океана, вылет из Москвы с багажом и трансфер"
+            ></textarea>
+            <div class="prompt-bottom-bar">
+              <span class="prompt-hint">Нажмите Enter для отправки</span>
+              <button type="button" id="heroSubmitBtn" class="btn-submit-prompt">
+                <span>Найти</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="hero-suggestions">
+            <span class="sugg-label">Популярные направления:</span>
+            <div class="sugg-tags">
+              <button type="button" class="sugg-btn" data-query="Тенерифе на двоих на 7 ночей, отель 5 звезд с бассейном у океана, вылет из Москвы на двоих с багажом и индивидуальный трансфер">
+                Тенерифе: 5 звезд у океана с перелетом и трансфером
+              </button>
+              <button type="button" class="sugg-btn" data-query="Гран-Канария, 7 ночей, отель 4-5 звезд рядом с пляжем и дюнами Маспаломас, перелет с багажом, комфортный трансфер">
+                Гран-Канария: курорт рядом с дюнами
+              </button>
+              <button type="button" class="sugg-btn" data-query="Лансароте, спа-курорт 5 звезд на первой линии для тихого отдыха, трансфер из аэропорта Арресифе">
+                Лансароте: спа-отель на первой линии
+              </button>
+              <button type="button" class="sugg-btn" data-query="Фуэртевентура на 7 ночей, бунгало у океана для водных видов спорта, перелет и трансфер">
+                Фуэртевентура: бунгало и серфинг
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Прижатая нижняя строка ввода -->
+      <div id="stickyChatInputBar" class="sticky-input-bar hidden">
+        <div class="input-card">
+          <textarea
+            id="streamInput"
+            class="stream-textarea"
+            rows="1"
+            placeholder="Напишите пожелание или уточните детали поездки..."
+          ></textarea>
+          <button type="button" id="streamSendBtn" class="btn-stream-send" title="Отправить">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ПРАВАЯ КОЛОНКА: МАРШРУТ И ДЕТАЛИ ПОЕЗДКИ -->
+    <aside id="artifactPanel" class="artifact-panel">
+      <!-- Шапка панели тура -->
+      <div class="artifact-header">
+        <div class="art-header-left">
+          <button type="button" id="toggleChatBtn" class="btn-toggle-chat" title="Скрыть/показать диалог">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="9" y1="3" x2="9" y2="21"></line>
+            </svg>
+            <span id="toggleChatBtnText">Скрыть диалог</span>
+          </button>
+          <h2 id="artifactTripTitle" class="artifact-headline">Тенерифе: 7 ночей</h2>
+        </div>
+
+        <button type="button" id="collapseArtifactBtn" class="btn-ctrl" title="Свернуть">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Вкладки деталей -->
+      <div class="artifact-tabs">
+        <button type="button" class="art-tab active" data-tab="tabItinerary">Маршрут</button>
+        <button type="button" class="art-tab" data-tab="tabHotels">Отель</button>
+        <button type="button" class="art-tab" data-tab="tabFlight">Перелет</button>
+        <button type="button" class="art-tab" data-tab="tabTransfer">Трансфер</button>
+      </div>
+
+      <!-- Тело панели -->
+      <div class="artifact-body">
+
+        <!-- Вкладка 1: Маршрут (Timeline) -->
+        <div id="tabItinerary" class="tab-pane active">
+          <!-- Карточка дат и графика -->
+          <div class="journey-summary-card">
+            <div class="journey-dates" id="journeyDatesText">1 — 8 ноября 2026 (7 ночей, 2 гостя)</div>
+
+            <!-- Таймлайн стыковок -->
+            <div class="timeline-flow">
+              <div class="timeline-step">
+                <div class="step-point"></div>
+                <div class="step-content">
+                  <div class="step-time">07:45 — 15:20</div>
+                  <div class="step-title" id="timelineFlightTitle">Вылет Москва (SVO) — Тенерифе (TFS)</div>
+                  <div class="step-desc">Аэрофлот + Turkish Airlines • 8.5 ч в пути • Багаж включен</div>
+                </div>
+              </div>
+
+              <div class="timeline-step">
+                <div class="step-point"></div>
+                <div class="step-content">
+                  <div class="step-time">15:45 — 16:20</div>
+                  <div class="step-title" id="timelineTransferTitle">Трансфер до отеля</div>
+                  <div class="step-desc">Встреча с табличкой в зале прилета • Комфорт Седан (35 км)</div>
+                </div>
+              </div>
+
+              <div class="timeline-step">
+                <div class="step-point step-point-hotel"></div>
+                <div class="step-content">
+                  <div class="step-time">16:30</div>
+                  <div class="step-title" id="timelineHotelTitle">Заселение в отель</div>
+                  <div class="step-desc">Hard Rock Hotel Tenerife 5★ • Номер с видом на океан</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Вкладка 2: Отели -->
+        <div id="tabHotels" class="tab-pane">
+          <div id="hotelsCatalogList" class="catalog-list">
+            <!-- Список карточек отелей -->
+          </div>
+        </div>
+
+        <!-- Вкладка 3: Перелет -->
+        <div id="tabFlight" class="tab-pane">
+          <div id="flightsCatalogList" class="catalog-list">
+            <!-- Список вариантов перелета -->
+          </div>
+        </div>
+
+        <!-- Вкладка 4: Трансфер -->
+        <div id="tabTransfer" class="tab-pane">
+          <div id="transfersCatalogList" class="catalog-list">
+            <!-- Список вариантов трансфера -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Итоговая стоимость тура и кнопка бронирования -->
+      <div class="artifact-footer">
+        <div class="footer-price-row">
+          <div>
+            <div class="total-title">Итого за тур:</div>
+            <div id="calcGrandTotalPrice" class="total-number">262 700 ₽</div>
+          </div>
+          <button type="button" id="toggleBreakdownBtn" class="btn-toggle-breakdown">
+            <span>Детали цены</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+        </div>
+
+        <div id="priceBreakdownDetails" class="price-breakdown-details hidden">
+          <div class="breakdown-row">
+            <span>Отель:</span>
+            <strong id="calcHotelPrice">150 500 ₽</strong>
+          </div>
+          <div class="breakdown-row">
+            <span>Перелет:</span>
+            <strong id="calcFlightPrice">108 000 ₽</strong>
+          </div>
+          <div class="breakdown-row">
+            <span>Трансфер:</span>
+            <strong id="calcTransferPrice">4 200 ₽</strong>
+          </div>
+        </div>
+
+        <button type="button" id="bookPackageBtn" class="btn-book-package">
+          <span>Забронировать тур</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+      </div>
+    </aside>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
