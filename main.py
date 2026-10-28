@@ -1,6 +1,7 @@
-def main():
-    print("Hello from odin-zapros-canary!")
-
+import uvicorn
+import os
 
 if __name__ == "__main__":
-    main()
+    port = int(os.getenv("PORT", "8080"))
+    host = os.getenv("HOST", "0.0.0.0")
+    uvicorn.run("app.main:app", host=host, port=port, reload=True)

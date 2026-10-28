@@ -1146,3 +1146,120 @@ html, body {
 .hidden {
   display: none !important;
 }
+
+/* Форматирование Markdown в сообщениях чата */
+.chat-p-gap {
+  height: 8px;
+}
+
+.chat-ul, .chat-ol {
+  margin: 6px 0 6px 4px;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chat-li {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-main);
+}
+
+.chat-oli {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-main);
+  list-style: none;
+  position: relative;
+  padding-left: 2px;
+}
+
+.oli-num {
+  font-weight: 700;
+  color: var(--primary);
+  margin-right: 4px;
+}
+
+/* Интерактивный опросник прямо в чате */
+.chat-quiz-msg .quiz-bubble {
+  background: #ffffff;
+  border: 1.5px solid var(--border-light);
+  border-left: 4px solid var(--primary);
+  box-shadow: var(--shadow-sm);
+  padding: 16px;
+  max-width: 480px;
+}
+
+.quiz-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.quiz-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--primary);
+  background-color: var(--bg-subtle);
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.quiz-question {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.quiz-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quiz-option-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  background-color: #f8fafc;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.quiz-option-btn:hover {
+  background-color: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+  transform: translateX(2px);
+}
+
+.quiz-option-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #cbd5e1;
+  transition: background-color 0.15s;
+  flex-shrink: 0;
+}
+
+.quiz-option-btn:hover .quiz-option-dot {
+  background-color: var(--primary);
+}
+
+.quiz-option-text {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-main);
+}
+

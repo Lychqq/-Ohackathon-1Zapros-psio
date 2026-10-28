@@ -392,16 +392,20 @@ const DATA_STORE = {
 
 // Текущее состояние поездки
 const tripState = {
+  hasActiveTour: false,
   nights: 7,
   guests: 2,
-  island: "Tenerife",
-  islandRu: "Тенерифе",
-  selectedHotelId: "h_ten_hardrock",
-  recommendedHotelId: "h_ten_hardrock",
-  selectedFlightId: "fl_1",
-  recommendedFlightId: "fl_1",
-  selectedTransferId: "tr_1",
-  recommendedTransferId: "tr_1",
+  startDay: 1,
+  startMonth: "ноября",
+  startYear: 2026,
+  island: null,
+  islandRu: null,
+  selectedHotelId: null,
+  recommendedHotelId: null,
+  selectedFlightId: null,
+  recommendedFlightId: null,
+  selectedTransferId: null,
+  recommendedTransferId: null,
   isArtifactOpen: false
 };
 
@@ -500,14 +504,36 @@ function setupHandlers() {
   });
 
   // Бронирование поездки целиком
-  bookBtn.addEventListener("click", () => {
+  bookBtn.addEventListener("click", async () => {
     const h = DATA_STORE.hotels.find(x => x.id === tripState.selectedHotelId);
     const f = DATA_STORE.flights.find(x => x.id === tripState.selectedFlightId);
     const t = DATA_STORE.transfers.find(x => x.id === tripState.selectedTransferId);
     const total = calculateGrandTotal();
 
+    let orderId = `OST-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+
+    try {
+      const res = await fetch("/api/v1/book", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          hotel_id: tripState.selectedHotelId,
+          flight_id: tripState.selectedFlightId,
+          transfer_id: tripState.selectedTransferId,
+          nights: tripState.nights,
+          guests: tripState.guests
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        orderId = data.order_id;
+      }
+    } catch (e) {
+      // При оффлайне используется сгенерированный orderId
+    }
+
     alert(
-      `Поездка оформлена в единый заказ:\n\n` +
+      `Заказ #${orderId} успешно оформлен!\n\n` +
       `Отель: ${h ? h.name : ""} (${tripState.nights} ночей)\n` +
       `Перелет: ${f ? f.airline : ""} (${f ? f.originCity : ""})\n` +
       `Трансфер: ${t ? t.vehicle : ""}\n\n` +
@@ -518,21 +544,172 @@ function setupHandlers() {
 }
 
 /**
- * Старт планирования тура
+ * Определение острова из текста
  */
-function startTripPlan(query) {
+function detectIslandFromText(text) {
+  if (!text) return null;
+  const lower = text.toLowerCase();
+  if (lower.includes("лансарот") || lower.includes("lanzarote")) return "Лансароте";
+  if (lower.includes("гран-канари") || lower.includes("gran canaria") || lower.includes("маспаломас")) return "Гран-Канария";
+  if (lower.includes("фуэртевентур") || lower.includes("fuerteventura")) return "Фуэртевентура";
+  if (lower.includes("тенериф") || lower.includes("tenerife") || lower.includes("тейде")) return "Тенерифе";
+  if (lower.includes("ла-пальм") || lower.includes("ла пальм")) return "Ла-Пальма";
+  if (lower.includes("ла-гомер") || lower.includes("ла гомер")) return "Ла-Гомера";
+  if (lower.includes("эль-йерр") || lower.includes("эль йерр")) return "Эль-Йерро";
+  return null;
+}
+
+/**
+ * Определение неподдерживаемых направлений вне Канар
+ */
+function detectUnsupportedDestination(text) {
+  if (!text) return null;
+  const lower = text.toLowerCase();
+  const list = ["росси", "сочи", "крым", "москв", "петербург", "питер", "турци", "египет", "дубай", "тайланд", "бали"];
+  for (const item of list) {
+    if (lower.includes("в " + item) || lower.includes("по " + item) || lower.includes("на " + item) || lower.includes("до " + item) || lower === item) {
+      return item === "росси" ? "Россия" : item.charAt(0).toUpperCase() + item.slice(1);
+    }
+  }
+  return null;
+}
+
+/**
+ * Определение абстрактного или неполного запроса (когда нет конкретных дат или количества человек)
+ */
+function isVagueQuery(text) {
+  const lower = text.toLowerCase().trim();
+
+  // Если явно указана длительность или количество людей — запрос конкретный
+  const hasDuration = /\d+\s*(дн|ноч|нед)/.test(lower) || lower.includes("недел") || lower.includes("уикенд");
+  const hasGuests = /\d+\s*(чел|гост|взросл|пасс)/.test(lower) || lower.includes("один") || lower.includes("двоих") || lower.includes("семь");
+  const hasExplicitCommand = lower.includes("собери тур") || lower.includes("тур под ключ") || lower.includes("открой план");
+
+  if (hasDuration || hasGuests || hasExplicitCommand) {
+    return false;
+  }
+
+  // Если просто назван остров ("Фуэртевентура", "хочу на Тенерифе"), но нет деталей — пусть агент спросит детали через квиз
+  return true;
+}
+
+/**
+ * Старт планирования тура через бэкенд FastAPI с бесшовным оффлайн-фоллбеком
+ */
+async function startTripPlan(query) {
   // Скрываем Welcome Hero
   document.getElementById("chatWelcomeHero").classList.add("hidden");
   document.getElementById("stickyChatInputBar").classList.remove("hidden");
 
-  // Добавляем сообщение пользователя
+  // 1. Проверка неподдерживаемых направлений
+  const unsupported = detectUnsupportedDestination(query);
+  if (unsupported) {
+    addChatMessage("user", query);
+    addChatMessage("agent", `Сервис «О!дин запрос» специализируется исключительно на комплексных турах на Канарские острова. Туры по направлению **${unsupported}** сервис не бронирует.\n\nВыберите один из Канарских островов для подбора поездки целиком:`);
+    renderInteractiveQuizInChat({
+      question: "Какой остров Канарского архипелага выберем?",
+      options: [
+        { id: "tenerife", text: "Тенерифе — пляжи, вулкан Тейде и аквапарки" },
+        { id: "gran_canaria", text: "Гран-Канария — золотые дюны Маспаломас" },
+        { id: "lanzarote", text: "Лансароте — марсианская лава и уединение" },
+        { id: "fuerteventura", text: "Фуэртевентура — океан, белый песок и серфинг" }
+      ]
+    });
+    return;
+  }
+
+  // 2. Если запрос абстрактный — передаем его агенту для диалога и интерактивного опроса
+  if (isVagueQuery(query)) {
+    sendUserFollowUp(query);
+    return;
+  }
+
+  // 3. Если в запросе есть конкретика — собираем полный тур
+  await assembleTourPackage(query);
+}
+
+/**
+ * Полная сборка турпакета под конкретный запрос
+ */
+async function assembleTourPackage(query) {
   addChatMessage("user", query);
 
-  // Парсим направление
-  parseQuery(query);
+  try {
+    const res = await fetch("/api/v1/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: query })
+    });
 
-  // Генерируем ответ и артефакт
-  setTimeout(() => {
+    if (!res.ok) throw new Error("Search API error");
+    const data = await res.json();
+
+    // Синхронизируем состояние
+    tripState.island = data.island_ru || data.island;
+    tripState.islandRu = data.island_ru || data.island;
+    tripState.nights = data.nights;
+    tripState.guests = data.guests;
+
+    if (data.hotels && data.hotels.length > 0) {
+      DATA_STORE.hotels = data.hotels.map(h => ({
+        id: h.id,
+        name: h.name,
+        island: h.island,
+        islandRu: h.island_ru,
+        stars: h.stars,
+        rating: h.rating,
+        reviewsCount: h.reviews_count,
+        matchScore: h.match_score,
+        priceNight: h.price_night,
+        exactAddress: h.exact_address,
+        location: h.location,
+        desc: h.desc,
+        amenities: h.amenities,
+        image: h.image
+      }));
+    }
+
+    if (data.flights && data.flights.length > 0) {
+      DATA_STORE.flights = data.flights.map(f => ({
+        id: f.id,
+        airline: f.airline,
+        flightNumber: f.flight_number,
+        origin: f.origin,
+        originCity: f.origin_city,
+        destination: f.destination,
+        destinationIsland: f.destination_island,
+        departureTime: f.departure_time,
+        arrivalTime: f.arrival_time,
+        duration: f.duration,
+        stops: f.stops,
+        priceTotal: f.price_total,
+        baggage: f.baggage
+      }));
+    }
+
+    if (data.transfers && data.transfers.length > 0) {
+      DATA_STORE.transfers = data.transfers.map(t => ({
+        id: t.id,
+        island: t.island,
+        vehicle: t.vehicle,
+        desc: t.desc,
+        route: t.route,
+        price: t.price
+      }));
+    }
+
+    tripState.hasActiveTour = true;
+    tripState.selectedHotelId = data.selected_hotel.id;
+    tripState.recommendedHotelId = data.selected_hotel.id;
+    tripState.selectedFlightId = data.selected_flight.id;
+    tripState.selectedTransferId = data.selected_transfer.id;
+
+    addAgentMessageWithArtifact(data.reply_text, data.grand_total);
+    openArtifact();
+
+  } catch (err) {
+    parseQuery(query);
+    tripState.hasActiveTour = true;
     const h = DATA_STORE.hotels.find(x => x.id === tripState.selectedHotelId);
     const f = DATA_STORE.flights.find(x => x.id === tripState.selectedFlightId);
     const t = DATA_STORE.transfers.find(x => x.id === tripState.selectedTransferId);
@@ -548,35 +725,276 @@ function startTripPlan(query) {
 
     addAgentMessageWithArtifact(replyText, total);
     openArtifact();
-  }, 400);
+  }
+}
+
+function getCurrentTripContext() {
+  if (!tripState.hasActiveTour || !tripState.selectedHotelId) {
+    return {
+      has_active_tour: false,
+      island: tripState.island,
+      island_ru: tripState.islandRu,
+      nights: tripState.nights || 7,
+      guests: tripState.guests || 2,
+      available_islands: [
+        { id: "tenerife", name: "Тенерифе", desc: "Вулкан Тейде, черные и золотые пляжи, развитая инфраструктура" },
+        { id: "gran_canaria", name: "Гран-Канария", desc: "Дюны Маспаломас, спа-комплексы и песчаные бухты" },
+        { id: "lanzarote", name: "Лансароте", desc: "Марсианские лавовые пейзажи и спокойный отдых" },
+        { id: "fuerteventura", name: "Фуэртевентура", desc: "Бесконечные дикие пляжи и мировой центр виндсерфинга" }
+      ]
+    };
+  }
+
+  const h = DATA_STORE.hotels.find(x => x.id === tripState.selectedHotelId);
+  const f = DATA_STORE.flights.find(x => x.id === tripState.selectedFlightId);
+  const t = DATA_STORE.transfers.find(x => x.id === tripState.selectedTransferId);
+
+  // Фильтруем доступные отели на текущем острове
+  const currentIsland = (tripState.islandRu || tripState.island || "").toLowerCase();
+  let matchedHotels = DATA_STORE.hotels.filter(x => {
+    const hi = (x.island || "").toLowerCase();
+    const hiru = (x.islandRu || "").toLowerCase();
+    return hi.includes(currentIsland) || currentIsland.includes(hi) || hiru.includes(currentIsland) || currentIsland.includes(hiru);
+  });
+  if (matchedHotels.length === 0) {
+    matchedHotels = DATA_STORE.hotels;
+  }
+
+  const availableHotels = matchedHotels.map(x => ({
+    id: x.id,
+    name: x.name,
+    stars: x.stars,
+    rating: x.rating,
+    price_night: x.priceNight,
+    amenities: x.amenities,
+    location: x.location
+  }));
+
+  const availableFlights = DATA_STORE.flights.map(x => ({
+    id: x.id,
+    airline: x.airline,
+    origin_city: x.originCity,
+    departure_time: x.departureTime,
+    arrival_time: x.arrivalTime,
+    price_total: x.priceTotal
+  }));
+
+  const availableTransfers = DATA_STORE.transfers.map(x => ({
+    id: x.id,
+    vehicle: x.vehicle,
+    price: x.price
+  }));
+
+  return {
+    island: tripState.island,
+    island_ru: tripState.islandRu,
+    nights: tripState.nights,
+    guests: tripState.guests,
+    hotel_id: tripState.selectedHotelId,
+    hotel_name: h ? h.name : "",
+    hotel_stars: h ? h.stars : 5,
+    hotel_rating: h ? h.rating : 9.0,
+    hotel_address: h ? h.exactAddress : "",
+    hotel_price_night: h ? h.priceNight : 0,
+    hotel_amenities: h ? h.amenities : [],
+    flight_id: tripState.selectedFlightId,
+    airline: f ? f.airline : "",
+    origin_city: f ? f.originCity : "Москва",
+    destination_island: f ? f.destinationIsland : tripState.islandRu,
+    departure_time: f ? f.departureTime : "",
+    arrival_time: f ? f.arrivalTime : "",
+    transfer_id: tripState.selectedTransferId,
+    transfer_vehicle: t ? t.vehicle : "",
+    transfer_price: t ? t.price : 0,
+    available_hotels: availableHotels,
+    available_flights: availableFlights,
+    available_transfers: availableTransfers
+  };
 }
 
 /**
- * Последующие сообщения в диалоге
+ * Применение UI-действий, возвращенных AI-агентом
  */
-function sendUserFollowUp(text) {
+function applyAgentAction(action) {
+  if (!action || !action.type) return;
+
+  // 1. Полная сборка тура под указанные параметры
+  if (action.type === "build_tour" || action.type === "switch_island") {
+    const island = action.island || tripState.islandRu || "Тенерифе";
+    const nights = action.nights || tripState.nights || 7;
+    const guests = action.guests || tripState.guests || 2;
+    assembleTourPackage(`Тур на остров ${island} на ${nights} ночей для ${guests} человек`);
+    return;
+  }
+
+  // 2. Смена количества ночей
+  if (action.type === "set_nights" && action.nights) {
+    tripState.nights = parseInt(action.nights, 10);
+    renderArtifactContent();
+    const grand = calculateGrandTotal();
+    const grandEl = document.getElementById("calcGrandTotalPrice");
+    if (grandEl) grandEl.textContent = `${grand.toLocaleString("ru-RU")} ₽`;
+  }
+
+  // Смена даты вылета
+  if (action.type === "set_departure_date" && action.day) {
+    tripState.startDay = parseInt(action.day, 10);
+    if (action.month) tripState.startMonth = action.month;
+    renderArtifactContent();
+  }
+
+  // 3. Смена количества гостей
+  if (action.type === "set_guests" && action.guests) {
+    tripState.guests = parseInt(action.guests, 10);
+    renderArtifactContent();
+    const grand = calculateGrandTotal();
+    const grandEl = document.getElementById("calcGrandTotalPrice");
+    if (grandEl) grandEl.textContent = `${grand.toLocaleString("ru-RU")} ₽`;
+  }
+
+  // 4. Смена конкретного отеля
+  if (action.type === "set_hotel" && action.hotel_id) {
+    const hotel = DATA_STORE.hotels.find(x => x.id === action.hotel_id);
+    if (hotel) {
+      tripState.selectedHotelId = action.hotel_id;
+      renderArtifactContent();
+    }
+  } else if (action.type === "set_flight" && action.flight_id) {
+    const flight = DATA_STORE.flights.find(x => x.id === action.flight_id);
+    if (flight) {
+      tripState.selectedFlightId = action.flight_id;
+      renderArtifactContent();
+    }
+  } else if (action.type === "set_transfer" && action.transfer_id) {
+    const transfer = DATA_STORE.transfers.find(x => x.id === action.transfer_id);
+    if (transfer) {
+      tripState.selectedTransferId = action.transfer_id;
+      renderArtifactContent();
+    }
+  }
+}
+
+/**
+ * Рендер интерактивного квиза прямо в чате
+ */
+function renderInteractiveQuizInChat(quizAction) {
+  const container = document.getElementById("chatHistory");
+  const quizDiv = document.createElement("div");
+  quizDiv.className = "chat-msg chat-msg-agent chat-quiz-msg";
+
+  const optionsHtml = (quizAction.options || []).map((opt, i) => `
+    <button class="quiz-option-btn" onclick="handleQuizAnswer('${escapeHtml(opt.text)}')">
+      <span class="quiz-option-dot"></span>
+      <span class="quiz-option-text">${escapeHtml(opt.text)}</span>
+    </button>
+  `).join("");
+
+  quizDiv.innerHTML = `
+    <div class="bubble quiz-bubble">
+      <div class="quiz-header">
+        <span class="quiz-badge">Уточнение формата</span>
+      </div>
+      <div class="quiz-question">${escapeHtml(quizAction.question || "Что именно вам ближе?")}</div>
+      <div class="quiz-options-list">
+        ${optionsHtml}
+      </div>
+    </div>
+  `;
+  container.appendChild(quizDiv);
+  container.scrollTop = container.scrollHeight;
+}
+
+window.handleQuizAnswer = function(answerText) {
+  // Вместо топорного assembleTourPackage посылаем ответ агенту
+  sendUserFollowUp(answerText);
+};
+
+/**
+ * Последующие сообщения в диалоге с реальным AI-агентом
+ */
+async function sendUserFollowUp(text) {
+  // 1. Проверка неподдерживаемых локаций
+  const unsupported = detectUnsupportedDestination(text);
+  if (unsupported) {
+    addChatMessage("user", text);
+    addChatMessage("agent", `Сервис «О!дин запрос» специализируется исключительно на комплексных турах на Канарские острова. Туры по направлению **${unsupported}** сервис не бронирует.\n\nВыберите один из Канарских островов для отдыха:`);
+    renderInteractiveQuizInChat({
+      question: "Какой остров Канарского архипелага выберем?",
+      options: [
+        { id: "tenerife", text: "Тенерифе — пляжи, вулкан Тейде и аквапарки" },
+        { id: "gran_canaria", text: "Гран-Канария — золотые дюны Маспаломас" },
+        { id: "lanzarote", text: "Лансароте — марсианская лава и уединение" },
+        { id: "fuerteventura", text: "Фуэртевентура — океан, белый песок и серфинг" }
+      ]
+    });
+    return;
+  }
+
+  // 2. Если в сообщении запрошен конкретный остров или параметры, но не было сборки — отправляем агенту
+  // Сохраняем остров в состояние, если пользователь его упомянул
+  const mentionedIsland = detectIslandFromText(text);
+  if (mentionedIsland) {
+    tripState.island = mentionedIsland;
+    tripState.islandRu = mentionedIsland;
+  }
+
   addChatMessage("user", text);
 
-  setTimeout(() => {
-    const lower = text.toLowerCase();
-    if (lower.includes("другой отель") || lower.includes("дешевле")) {
-      const candidates = DATA_STORE.hotels.filter(x => x.island === tripState.island && x.id !== tripState.selectedHotelId);
-      if (candidates.length > 0) {
-        tripState.selectedHotelId = candidates[0].id;
-        renderArtifactContent();
-        addChatMessage("agent", `Переключил отель на ${candidates[0].name}. План поездки справа и общая стоимость автоматически обновлены.`);
+  // Индикатор размышлений агента
+  const typingId = "typing-" + Date.now();
+  const container = document.getElementById("chatHistory");
+  const typingDiv = document.createElement("div");
+  typingDiv.id = typingId;
+  typingDiv.className = "chat-msg chat-msg-agent";
+  typingDiv.innerHTML = `<div class="bubble" style="opacity: 0.7; font-style: italic;">Агент анализирует базу и готовит ответ...</div>`;
+  container.appendChild(typingDiv);
+  container.scrollTop = container.scrollHeight;
+
+  try {
+    const historyPayload = (window.chatMessagesList || []).slice(-8).map(m => ({
+      role: m.role === "agent" ? "assistant" : "user",
+      content: m.text
+    }));
+
+    const res = await fetch("/api/v1/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: text,
+        history: historyPayload,
+        trip_context: getCurrentTripContext()
+      })
+    });
+
+    const el = document.getElementById(typingId);
+    if (el) el.remove();
+
+    if (res.ok) {
+      const data = await res.json();
+
+      // 1. Применяем реальные действия над сайтом
+      if (data.ui_actions && Array.isArray(data.ui_actions)) {
+        data.ui_actions.forEach(act => applyAgentAction(act));
       }
-    } else if (lower.includes("рейс") || lower.includes("вылет")) {
-      const candidates = DATA_STORE.flights.filter(x => x.id !== tripState.selectedFlightId);
-      if (candidates.length > 0) {
-        tripState.selectedFlightId = candidates[0].id;
-        renderArtifactContent();
-        addChatMessage("agent", `Выбрал рейс ${candidates[0].airline}. График прилета и трансфера в плане поездки обновлен.`);
+
+      // 2. Добавляем форматированный ответ консультанта
+      if (data.reply) {
+        addChatMessage("agent", data.reply);
       }
+
+      // 3. Если агент запустил интерактивные опросы — рендерим все
+      const quizActions = (data.ui_actions || []).filter(a => a.type === "show_quiz");
+      quizActions.forEach(quizAction => {
+        renderInteractiveQuizInChat(quizAction);
+      });
     } else {
-      addChatMessage("agent", `Параметры зафиксированы. Вы можете в любой момент изменить отель, класс перелета или трансфер прямо в плане поездки справа.`);
+      addChatMessage("agent", "Не удалось связаться с сервером. Попробуйте еще раз.");
     }
-  }, 350);
+  } catch (err) {
+    const el = document.getElementById(typingId);
+    if (el) el.remove();
+    addChatMessage("agent", "Сервер временно недоступен. Проверьте соединение.");
+  }
 }
 
 function parseQuery(text) {
@@ -655,17 +1073,49 @@ function renderArtifactContent() {
   const transfer = DATA_STORE.transfers.find(x => x.id === tripState.selectedTransferId);
 
   // Заголовок артефакта
-  document.getElementById("artifactTripTitle").textContent = `${tripState.islandRu}: тур на ${tripState.nights} ночей`;
+  const titleEl = document.getElementById("artifactTripTitle");
+  if (titleEl) {
+    titleEl.textContent = `${tripState.islandRu || "Канары"}: тур на ${tripState.nights || 7} ночей`;
+  }
 
-  // Таймлайн состыковки в первой вкладке "Маршрут"
+  // Обновление строки дат и гостей
+  const datesEl = document.getElementById("journeyDatesText");
+  if (datesEl) {
+    const nights = tripState.nights || 7;
+    const guests = tripState.guests || 2;
+    const startDay = tripState.startDay || 1;
+    const endDay = startDay + nights;
+    const month = tripState.startMonth || "ноября";
+    const year = tripState.startYear || 2026;
+    const guestsWord = guests === 1 ? "1 гость" : (guests < 5 ? `${guests} гостя` : `${guests} гостей`);
+    const nightsWord = nights === 1 ? "1 ночь" : (nights < 5 ? `${nights} ночи` : `${nights} ночей`);
+    datesEl.textContent = `${startDay} — ${endDay} ${month} ${year} (${nightsWord}, ${guestsWord})`;
+  }
+
+  // Рейс в таймлайне
   if (flight) {
-    document.getElementById("timelineFlightTitle").textContent = `Вылет из ${flight.originCity} (${flight.origin}) в ${tripState.islandRu} (${flight.destination})`;
+    const flTimeEl = document.getElementById("timelineFlightTime");
+    const flTitleEl = document.getElementById("timelineFlightTitle");
+    const flDescEl = document.getElementById("timelineFlightDesc");
+    if (flTimeEl) flTimeEl.textContent = `${flight.departureTime} — ${flight.arrivalTime}`;
+    if (flTitleEl) flTitleEl.textContent = `Вылет ${flight.originCity} (${flight.origin}) — ${tripState.islandRu || flight.destinationIsland} (${flight.destination})`;
+    if (flDescEl) flDescEl.textContent = `${flight.airline} • ${flight.duration} • ${flight.baggage}`;
   }
+
+  // Трансфер в таймлайне
   if (transfer) {
-    document.getElementById("timelineTransferTitle").textContent = `Трансфер: ${transfer.vehicle}`;
+    const trTitleEl = document.getElementById("timelineTransferTitle");
+    const trDescEl = document.getElementById("timelineTransferDesc");
+    if (trTitleEl) trTitleEl.textContent = `Трансфер: ${transfer.vehicle}`;
+    if (trDescEl) trDescEl.textContent = `${transfer.desc} • ${transfer.price.toLocaleString("ru-RU")} ₽`;
   }
+
+  // Отель в таймлайне
   if (hotel) {
-    document.getElementById("timelineHotelTitle").textContent = `Заселение: ${hotel.name} ${hotel.stars}★`;
+    const htTitleEl = document.getElementById("timelineHotelTitle");
+    const htDescEl = document.getElementById("timelineHotelDesc");
+    if (htTitleEl) htTitleEl.textContent = `Заселение: ${hotel.name} ${"★".repeat(hotel.stars || 4)}`;
+    if (htDescEl) htDescEl.textContent = `${hotel.exactAddress || hotel.location || "Канары"} • Номер подготовлен к приезду`;
   }
 
   // Отрисовка каталогов по вкладкам
@@ -681,14 +1131,23 @@ function renderHotelsCatalog() {
   const container = document.getElementById("hotelsCatalogList");
   if (!container) return;
 
-  const islandHotels = DATA_STORE.hotels.filter(h => h.island === tripState.island);
-  // Первым выводим текущий выбранный / рекомендованный отель
+  const currentIsland = (tripState.islandRu || tripState.island || "").toLowerCase();
+  let islandHotels = DATA_STORE.hotels.filter(h => {
+    const hi = (h.island || "").toLowerCase();
+    const hiru = (h.islandRu || "").toLowerCase();
+    return hi.includes(currentIsland) || currentIsland.includes(hi) || hiru.includes(currentIsland) || currentIsland.includes(hiru);
+  });
+  if (islandHotels.length === 0) {
+    islandHotels = DATA_STORE.hotels;
+  }
+
+  // Первым выводим текущий выбранный / рекомендованный отель, затем по рейтингу
   const sorted = [...islandHotels].sort((a, b) => {
     if (a.id === tripState.selectedHotelId) return -1;
     if (b.id === tripState.selectedHotelId) return 1;
     if (a.id === tripState.recommendedHotelId) return -1;
     if (b.id === tripState.recommendedHotelId) return 1;
-    return 0;
+    return (b.rating || 0) - (a.rating || 0);
   });
 
   container.innerHTML = sorted.map(hotel => {
@@ -903,25 +1362,54 @@ function updatePriceCalculation(hotel, flight, transfer) {
 }
 
 /**
+ * Аккуратный парсер Markdown для сообщений чата
+ */
+function formatMarkdown(text) {
+  if (!text) return "";
+  let html = escapeHtml(text);
+  // Жирный шрифт **текст**
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  // Курсив *текст*
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  // Списки с точками или дефисами
+  html = html.replace(/(?:^|\n)[•\-\*]\s+(.+)/g, '<li class="chat-li">$1</li>');
+  html = html.replace(/(<li class="chat-li">[\s\S]*?<\/li>)/g, '<ul class="chat-ul">$1</ul>');
+  // Убираем склеенные теги списков
+  html = html.replace(/<\/ul>\s*<ul class="chat-ul">/g, '');
+  // Нумерованные списки 1. 2. 3.
+  html = html.replace(/(?:^|\n)(\d+)\.\s+(.+)/g, '<li class="chat-oli"><span class="oli-num">$1.</span> $2</li>');
+  html = html.replace(/(<li class="chat-oli">[\s\S]*?<\/li>)/g, '<ol class="chat-ol">$1</ol>');
+  html = html.replace(/<\/ol>\s*<ol class="chat-ol">/g, '');
+  // Абзацы
+  html = html.replace(/\n\n/g, '<div class="chat-p-gap"></div>');
+  html = html.replace(/\n/g, '<br>');
+  return html;
+}
+
+/**
  * Чат сообщения
  */
 function addChatMessage(role, text) {
+  if (!window.chatMessagesList) window.chatMessagesList = [];
+  window.chatMessagesList.push({ role, text });
   const container = document.getElementById("chatHistory");
   const div = document.createElement("div");
   div.className = `chat-msg ${role === 'user' ? 'chat-msg-user' : 'chat-msg-agent'}`;
-  div.innerHTML = `<div class="bubble">${escapeHtml(text).replace(/\n/g, '<br>')}</div>`;
+  div.innerHTML = `<div class="bubble">${role === 'user' ? escapeHtml(text).replace(/\n/g, '<br>') : formatMarkdown(text)}</div>`;
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
 }
 
 function addAgentMessageWithArtifact(text, total) {
+  if (!window.chatMessagesList) window.chatMessagesList = [];
+  window.chatMessagesList.push({ role: "agent", text });
   const container = document.getElementById("chatHistory");
   const div = document.createElement("div");
   div.className = "chat-msg chat-msg-agent";
 
   div.innerHTML = `
     <div class="bubble">
-      ${escapeHtml(text).replace(/\n/g, '<br>')}
+      ${formatMarkdown(text)}
 
       <div class="artifact-trigger-card" onclick="openArtifact()">
         <div class="trigger-info">
