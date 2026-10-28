@@ -393,8 +393,10 @@ const DATA_STORE = {
 // Текущее состояние поездки
 const tripState = {
   hasActiveTour: false,
-  nights: 7,
-  guests: 2,
+  nights: null,
+  guests: null,
+  hasChosenGuests: false,
+  hasChosenDate: false,
   startDay: 1,
   startMonth: "ноября",
   startYear: 2026,
@@ -582,10 +584,10 @@ function isVagueQuery(text) {
 
   // Если явно указана длительность или количество людей — запрос конкретный
   const hasDuration = /\d+\s*(дн|ноч|нед)/.test(lower) || lower.includes("недел") || lower.includes("уикенд");
-  const hasGuests = /\d+\s*(чел|гост|взросл|пасс)/.test(lower) || lower.includes("один") || lower.includes("двоих") || lower.includes("семь");
+  const hasGuests = /\d+\s*(чел|гост|взросл|пасс)/.test(lower) || lower.includes("один") || lower.includes("соло") || lower.includes("двоих") || lower.includes("пара") || lower.includes("семь");
   const hasExplicitCommand = lower.includes("собери тур") || lower.includes("тур под ключ") || lower.includes("открой план");
 
-  if (hasDuration || hasGuests || hasExplicitCommand) {
+  if (hasDuration && hasGuests && (lower.includes("собери тур") || lower.includes("открой план") || /\d+★/.test(lower) || lower.includes("звезд"))) {
     return false;
   }
 
@@ -632,7 +634,7 @@ async function startTripPlan(query) {
  * Полная сборка турпакета под конкретный запрос
  */
 async function assembleTourPackage(query) {
-  addChatMessage("user", query);
+  // addChatMessage("user", query);
 
   try {
     const res = await fetch("/api/v1/search", {
@@ -734,8 +736,12 @@ function getCurrentTripContext() {
       has_active_tour: false,
       island: tripState.island,
       island_ru: tripState.islandRu,
-      nights: tripState.nights || 7,
-      guests: tripState.guests || 2,
+      nights: tripState.nights || null,
+      guests: tripState.hasChosenGuests ? tripState.guests : null,
+      departure_date: tripState.hasChosenDate ? `${tripState.startDay} ${tripState.startMonth} ${tripState.startYear}` : null,
+      hotel_id: tripState.selectedHotelId || null,
+      selected_hotel_id: tripState.selectedHotelId || null,
+      hotel_stars: tripState.preferredStars || null,
       available_islands: [
         { id: "tenerife", name: "Тенерифе", desc: "Вулкан Тейде, черные и золотые пляжи, развитая инфраструктура" },
         { id: "gran_canaria", name: "Гран-Канария", desc: "Дюны Маспаломас, спа-комплексы и песчаные бухты" },
@@ -820,6 +826,9 @@ function applyAgentAction(action) {
 
   // 1. Полная сборка тура под указанные параметры
   if (action.type === "build_tour" || action.type === "switch_island") {
+    if (false) {
+      return;
+    }
     const island = action.island || tripState.islandRu || "Тенерифе";
     const nights = action.nights || tripState.nights || 7;
     const guests = action.guests || tripState.guests || 2;
@@ -905,6 +914,36 @@ function renderInteractiveQuizInChat(quizAction) {
 }
 
 window.handleQuizAnswer = function(answerText) {
+  const ansLower = answerText.toLowerCase();
+  if (ansLower.includes("1 человек") || ansLower.includes("соло")) {
+    tripState.guests = 1;
+    tripState.hasChosenGuests = true;
+  } else if (ansLower.includes("2 человек") || ansLower.includes("пара")) {
+    tripState.guests = 2;
+    tripState.hasChosenGuests = true;
+  } else if (ansLower.includes("3+") || ansLower.includes("семья")) {
+    tripState.guests = 3;
+    tripState.hasChosenGuests = true;
+  }
+  if (ansLower.includes("ноябр") || ansLower.includes("декабр") || ansLower.includes("январ") || ansLower.includes("ближайш")) {
+    tripState.hasChosenDate = true;
+  }
+
+  // Распознаем выбор отеля из квиза: выставляем selectedHotelId и preferredStars
+  const foundHotel = DATA_STORE.hotels.find(h => {
+    const hName = h.name.toLowerCase();
+    return ansLower.includes(hName) || hName.includes(ansLower);
+  });
+  if (foundHotel) {
+    tripState.selectedHotelId = foundHotel.id;
+    tripState.preferredStars = foundHotel.stars || 4;
+  } else if (ansLower.includes("3★") || ansLower.includes("3*")) {
+    tripState.preferredStars = 3;
+  } else if (ansLower.includes("4★") || ansLower.includes("4*") || ansLower.includes("эко") || ansLower.includes("комфорт")) {
+    tripState.preferredStars = 4;
+  } else if (ansLower.includes("5★") || ansLower.includes("5*") || ansLower.includes("люкс") || ansLower.includes("премиум")) {
+    tripState.preferredStars = 5;
+  }
   // Вместо топорного assembleTourPackage посылаем ответ агенту
   sendUserFollowUp(answerText);
 };
@@ -941,6 +980,46 @@ async function sendUserFollowUp(text) {
   addChatMessage("user", text);
 
   // Индикатор размышлений агента
+  const lowerText = text.toLowerCase();
+  if (lowerText.includes("1 человек") || lowerText.includes("соло") || lowerText.includes("один") || lowerText.includes("на одного")) {
+    tripState.guests = 1;
+    tripState.hasChosenGuests = true;
+  } else if (lowerText.includes("2 человек") || lowerText.includes("пара") || lowerText.includes("двоих") || lowerText.includes("на двоих")) {
+    tripState.guests = 2;
+    tripState.hasChosenGuests = true;
+  } else if (lowerText.includes("3 и более") || lowerText.includes("3+") || lowerText.includes("семья") || lowerText.includes("троих")) {
+    tripState.guests = 3;
+    tripState.hasChosenGuests = true;
+  }
+  const nightsMatch = lowerText.match(/(\d+)\s*(?:ноч|дн)/);
+  if (nightsMatch) {
+    tripState.nights = parseInt(nightsMatch[1], 10);
+  } else if (lowerText.includes("недельк") || lowerText.includes("неделю") || lowerText.includes("неделя")) {
+    tripState.nights = 7;
+  } else if (lowerText.includes("две недели")) {
+    tripState.nights = 14;
+  }
+  const dayMatch = lowerText.match(/(?:вылет\s+|с\s+)?(\d{1,2})\s*(?:-го|-я|го)?\s*(ноябр|декабр|январ|феврал|март|апрел)/);
+  if (dayMatch) {
+    tripState.startDay = parseInt(dayMatch[1], 10);
+    const m = dayMatch[2];
+    if (m.startsWith("ноябр")) tripState.startMonth = "ноября";
+    else if (m.startsWith("декабр")) tripState.startMonth = "декабря";
+    else if (m.startsWith("январ")) tripState.startMonth = "января";
+    else if (m.startsWith("феврал")) tripState.startMonth = "февраля";
+    tripState.hasChosenDate = true;
+  } else if (lowerText.includes("ноябр") || lowerText.includes("декабр") || lowerText.includes("новогод") || lowerText.includes("ближайш")) {
+    tripState.hasChosenDate = true;
+  }
+  if (lowerText.includes("3★") || lowerText.includes("3 звезд") || lowerText.includes("3*")) {
+    tripState.preferredStars = 3;
+  } else if (lowerText.includes("4★") || lowerText.includes("4 звезд") || lowerText.includes("4*")) {
+    tripState.preferredStars = 4;
+  } else if (lowerText.includes("5★") || lowerText.includes("5 звезд") || lowerText.includes("5*") || lowerText.includes("люкс")) {
+    tripState.preferredStars = 5;
+  } else if (lowerText.includes("эко") || lowerText.includes("комфорт")) {
+    tripState.preferredStars = 4;
+  }
   const typingId = "typing-" + Date.now();
   const container = document.getElementById("chatHistory");
   const typingDiv = document.createElement("div");

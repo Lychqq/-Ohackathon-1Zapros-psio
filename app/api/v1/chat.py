@@ -80,7 +80,36 @@ async def chat_with_agent(payload: ChatRequest):
         ]
 
     result = await generate_chat_response(messages=messages, trip_context=trip_ctx)
+
+    ui_acts = result.get("ui_actions", [])
+    has_build = any(a.get("type") in ["build_tour", "switch_island"] for a in ui_acts)
+    all_text = " ".join([m.content for m in payload.history] + [payload.message]).lower()
+    has_chosen_hotel = bool(
+        trip_ctx.get("hotel_id") or 
+        trip_ctx.get("selected_hotel_id") or 
+        any(k in all_text for k in ["llano campo", "hermigua", "los herrera", "la punta", "bellavista", "botanico", "anthelia", "yaiza", "castillo"])
+    )
+
+    if has_build and not has_chosen_hotel:
+        ui_acts = [a for a in ui_acts if a.get("type") not in ["build_tour", "switch_island"]]
+        hotels = trip_ctx.get("available_hotels", [])
+        options = []
+        for h in hotels[:4]:
+            h_name = h.get("name", "Отель")
+            h_stars = h.get("stars", 3)
+            h_price = h.get("price", 0)
+            options.append({
+                "id": str(h.get("id")),
+                "text": f"{h_name} ({h_stars}★, от {h_price:,} ₽/ночь)"
+            })
+        if options:
+            ui_acts.append({
+                "type": "show_quiz",
+                "question": "Какой вариант проживания вам ближе?",
+                "options": options
+            })
+            result["reply"] = "Отлично, зафиксировал гостей! Теперь выберите отель на Ла-Гомере из проверенных вариантов:"
     return ChatResponse(
         reply=result.get("reply", ""),
-        ui_actions=result.get("ui_actions", [])
+        ui_actions=ui_acts
     )
